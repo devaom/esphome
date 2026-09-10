@@ -355,6 +355,15 @@ void SpeakerMediaPlayer::loop() {
     ESP_LOGE(TAG, "The media pipeline's audio decoder encountered an error.");
   }
 
+  if ((this->media_pipeline_state_ == AudioPipelineState::ERROR_READING) ||
+      (this->media_pipeline_state_ == AudioPipelineState::ERROR_DECODING)) {
+    // The current item failed to play, so drop it from the playlist. It is otherwise only popped after the
+    // pipeline reports PLAYING, so a failing item would be restarted indefinitely.
+    if (!this->media_playlist_.empty()) {
+      this->media_playlist_.pop_front();
+    }
+  }
+
   AudioPipelineState old_announcement_pipeline_state = this->announcement_pipeline_state_;
   if (this->announcement_pipeline_ != nullptr) {
     this->announcement_pipeline_state_ = this->announcement_pipeline_->process_state();
@@ -364,6 +373,15 @@ void SpeakerMediaPlayer::loop() {
     ESP_LOGE(TAG, "The announcement pipeline's file reader encountered an error.");
   } else if (this->announcement_pipeline_state_ == AudioPipelineState::ERROR_DECODING) {
     ESP_LOGE(TAG, "The announcement pipeline's audio decoder encountered an error.");
+  }
+
+  if ((this->announcement_pipeline_state_ == AudioPipelineState::ERROR_READING) ||
+      (this->announcement_pipeline_state_ == AudioPipelineState::ERROR_DECODING)) {
+    // The current item failed to play, so drop it from the playlist. It is otherwise only popped after the
+    // pipeline reports PLAYING, so a failing item would be restarted indefinitely.
+    if (!this->announcement_playlist_.empty()) {
+      this->announcement_playlist_.pop_front();
+    }
   }
 
   if (this->announcement_pipeline_state_ != AudioPipelineState::STOPPED) {
